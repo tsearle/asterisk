@@ -3055,7 +3055,11 @@ struct ast_sip_session *ast_sip_session_alloc(struct ast_sip_endpoint *endpoint,
 		dsp_features |= DSP_FEATURE_FAX_DETECT;
 	}
 	if (dsp_features) {
-		session->dsp = ast_dsp_new();
+		if (endpoint->dtmf_inband_mute) {
+			session->dsp = ast_dsp_mute_new();
+		} else {
+			session->dsp = ast_dsp_new();
+		}
 		if (!session->dsp) {
 			return NULL;
 		}
