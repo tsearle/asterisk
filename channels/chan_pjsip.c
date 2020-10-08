@@ -665,6 +665,10 @@ static struct ast_channel *chan_pjsip_new(struct ast_sip_session *session, int s
 		ast_set_flag(ast_channel_flags(chan), AST_FLAG_NO_NATIVE_RTP_BRIDGE);
 		ast_log(LOG_NOTICE, "dtmf inband mute detected on '%s'\n", ast_channel_name(chan));
 	}
+	if (channel->session->dtmf == AST_SIP_DTMF_INBAND || channel->session->dtmf == AST_SIP_DTMF_AUTO) {
+		ast_set_flag(ast_channel_flags(chan), AST_FLAG_NO_NATIVE_RTP_BRIDGE);
+		ast_log(LOG_NOTICE, "dtmf inband detection configured on '%s'\n", ast_channel_name(chan));
+	}
 	return chan;
 }
 
@@ -963,7 +967,7 @@ static struct ast_frame *chan_pjsip_read_stream(struct ast_channel *ast)
 							}
 						} else {
 							/* peer session doesn't have a dsp */
-							if ((peer_session->dsp = ast_dsp_new())) {
+							if ((peer_session->dsp = ast_dsp_mute_new())) {
 								ast_dsp_set_features(peer_session->dsp, DSP_FEATURE_DIGIT_DETECT);
 							}
 						}
