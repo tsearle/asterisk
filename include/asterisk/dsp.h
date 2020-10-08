@@ -58,7 +58,10 @@
 #define DSP_TONE_STATE_SPECIAL3 7
 #define DSP_TONE_STATE_HUNGUP 	8
 
-struct ast_dsp;
+struct ast_dsp {
+	struct ast_dsp_tech *tech;
+        void *dsp_pvt;
+};
 
 struct ast_dsp_busy_pattern {
 	/*! Number of elements. */
@@ -74,12 +77,39 @@ enum threshold {
 	THRESHOLD_MAX = 1,
 };
 
+struct ast_dsp_tech {
+        void (*dsp_free)(void *dsp);
+        unsigned int (*dsp_get_sample_rate)(const void *dsp);
+        void (*dsp_set_threshold)(void *dsp, int threshold);
+        void (*dsp_set_busy_count)(void *dsp, int cadences);
+        void (*dsp_set_busy_pattern)(void *dsp, const struct ast_dsp_busy_pattern *cadence);
+        int (*dsp_call_progress)(void *dsp, struct ast_frame *inf);
+        int (*dsp_set_call_progress_zone)(void *dsp, char *zone);
+        struct ast_frame *(*dsp_process)(struct ast_channel *chan, void *dsp, struct ast_frame *inf);
+        int (*dsp_silence)(void *dsp, struct ast_frame *f, int *totalsilence);
+        int (*dsp_silence_with_energy)(void *dsp, struct ast_frame *f, int *totalsilence, int *frames_energy);
+        int (*dsp_noise)(void *dsp, struct ast_frame *f, int *totalnoise);
+        int (*dsp_busydetect)(void *dsp);
+        void (*dsp_reset)(void *dsp);
+        void (*dsp_digitreset)(void *dsp);
+        void (*dsp_set_features)(void *dsp, int features);
+        int (*dsp_get_features)(void *dsp);
+        int (*dsp_set_digitmode)(void *dsp, int digitmode);
+        int (*dsp_set_faxmode)(void *dsp, int faxmode);
+        int (*dsp_was_muted)(void *dsp);
+        int (*dsp_get_tstate)(void *dsp);
+        int (*dsp_get_tcount)(void *dsp);
+};
+
+
 /*! \brief Allocates a new dsp with a specific internal sample rate used
  * during processing. */
 struct ast_dsp *ast_dsp_new_with_rate(unsigned int sample_rate);
+struct ast_dsp *ast_dsp_mute_new_with_rate(unsigned int sample_rate);
 
 /*! \brief Allocates a new dsp, assumes 8khz for internal sample rate */
 struct ast_dsp *ast_dsp_new(void);
+struct ast_dsp *ast_dsp_mute_new(void);
 
 void ast_dsp_free(struct ast_dsp *dsp);
 

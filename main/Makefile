@@ -17,7 +17,7 @@ all: asterisk
 
 include $(ASTTOPDIR)/Makefile.moddir_rules
 
-MOD_SRC:=cdr.c cel.c config.c ccss.c dnsmgr.c dsp.c enum.c features.c http.c indications.c logger.c manager.c named_acl.c plc.c sounds.c udptl.c
+MOD_SRC:=cdr.c cel.c config.c ccss.c dnsmgr.c dsp.c dsp_mute.c dsp_digit.c enum.c features.c http.c indications.c logger.c manager.c named_acl.c plc.c sounds.c udptl.c
 # Allow deletion of built-in modules without needing to modify this source.
 MOD_SRC:=$(wildcard $(MOD_SRC))
 MOD_OBJS:=$(sort $(MOD_SRC:.c=.o))
@@ -158,7 +158,7 @@ bucket.o: _ASTCFLAGS+=$(URIPARSER_INCLUDE)
 cdr.o: _ASTCFLAGS+=$(AST_NO_FORMAT_TRUNCATION)
 crypt.o: _ASTCFLAGS+=$(CRYPT_INCLUDE)
 db.o: _ASTCFLAGS+=$(SQLITE3_INCLUDE)
-dsp.o: _ASTCFLAGS+=$(call get_menuselect_cflags,RADIO_RELAX)
+dsp.o dsp_mute.o dsp_digit.o: _ASTCFLAGS+=$(call get_menuselect_cflags,RADIO_RELAX)
 http.o: _ASTCFLAGS+=$(GMIMECFLAGS)
 iostream.o: _ASTCFLAGS+=$(OPENSSL_INCLUDE)
 json.o: _ASTCFLAGS+=$(JANSSON_INCLUDE)
