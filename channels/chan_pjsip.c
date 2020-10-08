@@ -856,6 +856,15 @@ static struct ast_frame *chan_pjsip_read_stream(struct ast_channel *ast)
 	}
 
 	for (cur = f; cur; cur = AST_LIST_NEXT(cur, frame_list)) {
+		if (cur->frametype == AST_FRAME_CONTROL && cur->subclass.integer == AST_CONTROL_SRCCHANGE) {
+			if (channel->session->dsp) {
+				ast_dsp_reset(channel->session->dsp);
+			}
+			break;
+		}
+	}
+
+	for (cur = f; cur; cur = AST_LIST_NEXT(cur, frame_list)) {
 		if (cur->frametype == AST_FRAME_VOICE) {
 			break;
 		}
@@ -1866,8 +1875,30 @@ static int chan_pjsip_indicate(struct ast_channel *ast, int condition, const voi
 		}
 		break;
 	case AST_CONTROL_SRCUPDATE:
+		for (i = 0; i < AST_VECTOR_SIZE(&channel->session->active_media_state->sessions); ++i) {
+			media = AST_VECTOR_GET(&channel->session->active_media_state->sessions, i);
+			if (!media) {
+				continue;
+			}
+			if (media->rtp) {
+				if (media->type == AST_MEDIA_TYPE_AUDIO || media->type == AST_MEDIA_TYPE_VIDEO) {
+					ast_rtp_instance_update_source(media->rtp);
+				}
+			}
+		}
 		break;
 	case AST_CONTROL_SRCCHANGE:
+		for (i = 0; i < AST_VECTOR_SIZE(&channel->session->active_media_state->sessions); ++i) {
+			media = AST_VECTOR_GET(&channel->session->active_media_state->sessions, i);
+			if (!media) {
+				continue;
+			}
+			if (media->rtp) {
+				if (media->type == AST_MEDIA_TYPE_AUDIO || media->type == AST_MEDIA_TYPE_VIDEO) {
+					ast_rtp_instance_update_source(media->rtp);
+				}
+			}
+		}
 		break;
 	case AST_CONTROL_REDIRECTING:
 		if (ast_channel_state(ast) != AST_STATE_UP) {
