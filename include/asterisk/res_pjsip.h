@@ -836,6 +836,8 @@ struct ast_sip_endpoint {
 	unsigned int ignore_183_without_sdp;
 	/*! Enable STIR/SHAKEN support on this endpoint */
 	unsigned int stir_shaken;
+	/*! Activate dtmf inband removal*/
+	unsigned int dtmf_inband_mute;
 };
 
 /*! URI parameter for symmetric transport */

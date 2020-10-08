@@ -1035,6 +1035,8 @@ enum {
 	 * The channel is executing a subroutine or macro
 	 */
 	AST_FLAG_SUBROUTINE_EXEC = (1 << 27),
+	/* prevent native rtp bridge from occuring */
+	AST_FLAG_NO_NATIVE_RTP_BRIDGE = (1 << 28),
 };
 
 /*! \brief ast_bridge_config flags */

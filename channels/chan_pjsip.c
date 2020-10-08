@@ -66,6 +66,8 @@
 
 #include "asterisk/res_pjsip.h"
 #include "asterisk/res_pjsip_session.h"
+#include "asterisk/bridge.h"
+#include "asterisk/bridge_channel.h"
 #include "asterisk/stream.h"
 
 #include "pjsip/include/chan_pjsip.h"
@@ -659,7 +661,10 @@ static struct ast_channel *chan_pjsip_new(struct ast_sip_session *session, int s
 	ast_channel_unlock(chan);
 
 	set_channel_on_rtp_instance(session, ast_channel_uniqueid(chan));
-
+	if (session->endpoint->dtmf_inband_mute) {
+		ast_set_flag(ast_channel_flags(chan), AST_FLAG_NO_NATIVE_RTP_BRIDGE);
+		ast_log(LOG_NOTICE, "dtmf inband mute detected on '%s'\n", ast_channel_name(chan));
+	}
 	return chan;
 }
 
@@ -918,6 +923,46 @@ static struct ast_frame *chan_pjsip_read_stream(struct ast_channel *ast)
 			}
 			ast_debug(3, "Channel driver fax CNG detection timeout on %s\n",
 				ast_channel_name(ast));
+		}
+	}
+	if (session->endpoint->dtmf_inband_mute) {
+		/* inband_mute is enabled on the channel. We'll try to set the option on the bridged channel*/
+		struct ast_bridge *bridge = ast_channel_get_bridge(ast);
+
+		if (bridge) {
+			struct ast_channel *peer_channel = ast_bridge_peer_nolock(bridge, ast);
+			ao2_ref(bridge, -1);
+
+			if (peer_channel) {
+				ast_channel_lock(peer_channel);
+
+				if (ast_channel_tech(peer_channel) == &chan_pjsip_tech) {
+					struct ast_sip_channel_pvt *peer_channel_pvt = ast_channel_tech_pvt(peer_channel);
+					struct ast_sip_session *peer_session = peer_channel_pvt->session;
+
+					if (peer_session) {
+
+						if (peer_session->dsp) {
+							int dsp_features = ast_dsp_get_features(peer_session->dsp);
+
+							if (dsp_features) {
+
+								if (!(dsp_features & DSP_FEATURE_DIGIT_DETECT)) {
+									dsp_features |= DSP_FEATURE_DIGIT_DETECT;
+									ast_dsp_set_features(peer_session->dsp, dsp_features);
+								}
+							}
+						} else {
+							/* peer session doesn't have a dsp */
+							if ((peer_session->dsp = ast_dsp_new())) {
+								ast_dsp_set_features(peer_session->dsp, DSP_FEATURE_DIGIT_DETECT);
+							}
+						}
+					}
+				}
+				ast_channel_unlock(peer_channel);
+				ao2_ref(peer_channel, -1);
+			}
 		}
 	}
 	if (session->dsp) {
@@ -2197,7 +2242,6 @@ static int chan_pjsip_digit_begin(struct ast_channel *chan, char digit)
 	struct ast_sip_session_media *media;
 
 	media = channel->session->active_media_state->default_session[AST_MEDIA_TYPE_AUDIO];
-
 	switch (channel->session->dtmf) {
 	case AST_SIP_DTMF_RFC_4733:
 		if (!media || !media->rtp) {
@@ -2326,7 +2370,37 @@ static int chan_pjsip_digit_end(struct ast_channel *ast, char digit, unsigned in
 	}
 
 	media = channel->session->active_media_state->default_session[AST_MEDIA_TYPE_AUDIO];
+	if (channel->session->endpoint->dtmf_inband_mute) {
+		/* inband_mute is enabled on the channel. We'll try to set the option on the bridged channel*/
+		struct ast_bridge *bridge = ast_channel_get_bridge(ast);
+		if (channel->session->dsp) {
+			ast_dsp_reset(channel->session->dsp);
+		}
 
+		if (bridge) {
+			struct ast_channel *peer_channel = ast_bridge_peer_nolock(bridge, ast);
+			ao2_ref(bridge, -1);
+
+			if (peer_channel) {
+				ast_channel_lock(peer_channel);
+
+				if (ast_channel_tech(peer_channel) == &chan_pjsip_tech) {
+					struct ast_sip_channel_pvt *peer_channel_pvt = ast_channel_tech_pvt(peer_channel);
+					struct ast_sip_session *peer_session = peer_channel_pvt->session;
+
+					if (peer_session) {
+
+						if (peer_session->dsp) {
+							ast_dsp_reset(peer_session->dsp);
+						}
+					}
+				}
+
+				ast_channel_unlock(peer_channel);
+				ao2_ref(peer_channel, -1);
+			}
+		}
+	}
 	switch (channel->session->dtmf) {
 	case AST_SIP_DTMF_AUTO_INFO:
 	{

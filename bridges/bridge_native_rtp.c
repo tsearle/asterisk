@@ -627,6 +627,15 @@ static int native_rtp_bridge_capable(struct ast_channel *chan)
 
 /*!
  * \internal
+ * \brief Internal helper function which checks the AST_FLAG_NO_NATIVE_RTP_BRIDGE flag
+ */
+static int no_native_rtp_bridge_enabled(struct ast_channel *chan)
+{
+	return ast_test_flag(ast_channel_flags(chan), AST_FLAG_NO_NATIVE_RTP_BRIDGE);
+}
+
+/*!
+ * \internal
  * \brief Internal helper function which checks whether both channels are compatible with our native bridging
  */
 static int native_rtp_bridge_compatible_check(struct ast_bridge *bridge, struct ast_bridge_channel *bc0, struct ast_bridge_channel *bc1)
@@ -754,6 +763,17 @@ static int native_rtp_bridge_compatible_check(struct ast_bridge *bridge, struct 
 	ast_debug(3, "Bridge '%s': Packetization comparison success between RTP streams (read_ptime0:%d == write_ptime1:%d and read_ptime1:%d == write_ptime0:%d).\n",
 		bridge->uniqueid,
 		read_ptime0, write_ptime1, read_ptime1, write_ptime0);
+	if (no_native_rtp_bridge_enabled(bc0->chan)){
+		ast_debug(1, "Bridge '%s' can not use native RTP bridge as channel '%s' has dtmf inband mute enabled\n",
+		bridge->uniqueid, ast_channel_name(bc0->chan));
+		return 0;
+	}
+
+	if (no_native_rtp_bridge_enabled(bc1->chan)){
+		ast_debug(1, "Bridge '%s' can not use native RTP bridge as channel '%s' has dtmf inband mute enabled\n",
+		bridge->uniqueid, ast_channel_name(bc1->chan));
+		return 0;
+	}
 
 	return 1;
 }

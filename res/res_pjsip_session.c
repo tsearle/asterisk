@@ -3048,7 +3048,7 @@ struct ast_sip_session *ast_sip_session_alloc(struct ast_sip_endpoint *endpoint,
 		return NULL;
 	}
 
-	if (endpoint->dtmf == AST_SIP_DTMF_INBAND || endpoint->dtmf == AST_SIP_DTMF_AUTO) {
+	if (endpoint->dtmf == AST_SIP_DTMF_INBAND || endpoint->dtmf == AST_SIP_DTMF_AUTO || endpoint->dtmf_inband_mute) {
 		dsp_features |= DSP_FEATURE_DIGIT_DETECT;
 	}
 	if (endpoint->faxdetect) {
